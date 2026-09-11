@@ -11,7 +11,7 @@ from aiogram.types import (
 
 TOKEN = os.getenv("BOT_TOKEN")
 # Вставь свой ID от @userinfobot (число без кавычек), чтобы получать заявки
-ADMIN_ID = 123456789  
+ADMIN_ID = 980227176  
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
