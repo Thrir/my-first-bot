@@ -10,7 +10,7 @@ from aiogram.types import (
 )
 
 TOKEN = os.getenv("BOT_TOKEN")
-# ВСТАВЬ СВОЙ TELEGRAM ID (число), чтобы получать уведомления о заявках
+# Вставь свой ID от @userinfobot (число без кавычек), чтобы получать заявки
 ADMIN_ID = 123456789  
 
 bot = Bot(token=TOKEN)
@@ -18,28 +18,36 @@ dp = Dispatcher()
 
 # --- КЛАВИАТУРЫ ---
 
-# Главное меню (Reply-кнопки внизу экрана)
+# 1. Главное меню (внизу экрана)
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="📖 Получить гайд"), KeyboardButton(text="❓ Частые вопросы")],
-        [KeyboardButton(text="📩 Оставить заявку / Связаться")]
+        [KeyboardButton(text="🎁 Забрать гайд"), KeyboardButton(text="🧮 Рассчитать стоимость")],
+        [KeyboardButton(text="❓ Частые вопросы"), KeyboardButton(text="🚀 Заказать услугу")]
     ],
     resize_keyboard=True
 )
 
-# Inline-кнопка для ссылки
-guide_inline_kb = InlineKeyboardMarkup(
+# 2. Кнопка выдачи гайда
+guide_kb = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="🔥 Скачать гайд (PDF)", url="https://google.com")]
+        [InlineKeyboardButton(text="📖 Открыть гайд (PDF)", url="https://google.com")]
     ]
 )
 
-# Inline-меню для FAQ
-faq_inline_kb = InlineKeyboardMarkup(
+# 3. Интерактивный калькулятор
+calc_kb = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="💰 Сколько стоят услуги?", callback_data="faq_price")],
-        [InlineKeyboardButton(text="⏱ Сроки выполнения?", callback_data="faq_time")],
-        [InlineKeyboardButton(text="🚀 Как начать работу?", callback_data="faq_start")]
+        [InlineKeyboardButton(text="🌐 Лендинг / Сайт", callback_data="calc_site")],
+        [InlineKeyboardButton(text="🤖 Telegram-бот", callback_data="calc_bot")],
+        [InlineKeyboardButton(text="📈 Продвижение / Реклама", callback_data="calc_promo")]
+    ]
+)
+
+# 4. Меню FAQ
+faq_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="⏱ Сроки разработки", callback_data="faq_time")],
+        [InlineKeyboardButton(text="💳 Способы оплаты", callback_data="faq_pay")]
     ]
 )
 
@@ -48,63 +56,75 @@ faq_inline_kb = InlineKeyboardMarkup(
 @dp.message(CommandStart())
 async def start_cmd(message: types.Message):
     welcome_text = (
-        f"Здравствуйте, {message.from_user.first_name}! 👋\n\n"
-        "Я официальный бот-помощник.\n"
-        "Здесь вы можете скачать полезный гайд, узнать ответы на популярные вопросы "
-        "или оставить заявку на консультацию."
+        f"Здравствуйте, **{message.from_user.first_name}**! 👋\n\n"
+        "Добро пожаловать в сервис автоматических услуг.\n\n"
+        "Воспользуйтесь меню ниже, чтобы скачать гайд, рассчитать "
+        "стоимость вашего проекта или связаться со специалистом 👇"
     )
-    await message.answer(welcome_text, reply_markup=main_kb)
+    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=main_kb)
 
-@dp.message(F.text == "📖 Получить гайд")
+# Выдача гайда
+@dp.message(F.text == "🎁 Забрать гайд")
 async def send_guide(message: types.Message):
-    await message.answer(
-        "Ваш гайд готов к скачиванию! Жмите на кнопку ниже 👇", 
-        reply_markup=guide_inline_kb
+    guide_text = (
+        "🔥 **Ваш пошаговый гайд готов!**\n\n"
+        "Внутри собраны лучшие практики по развитию бизнеса и автоматизации "
+        "процессов. Нажимайте на кнопку ниже:"
     )
-    # Уведомление админу
-    if ADMIN_ID != 123456789:
-        await bot.send_message(
-            ADMIN_ID, 
-            f"🔔 Пользователь @{message.from_user.username or message.from_user.id} скачал гайд!"
-        )
+    await message.answer(guide_text, parse_mode="Markdown", reply_markup=guide_kb)
 
-@dp.message(F.text == "❓ Частые вопросы")
-async def show_faq(message: types.Message):
-    await message.answer("Выберите интересующий вас вопрос:", reply_markup=faq_inline_kb)
+# Калькулятор
+@dp.message(F.text == "🧮 Рассчитать стоимость")
+async def show_calculator(message: types.Message):
+    await message.answer("Выберите тип проекта для расчета примерной стоимости:", reply_markup=calc_kb)
 
-# Обработка нажатий на FAQ
-@dp.callback_query(F.data.startswith("faq_"))
-async def process_faq(callback: types.CallbackQuery):
-    if callback.data == "faq_price":
-        await callback.message.answer("💳 Стоимость рассчитывается индивидуально под ваш проект.")
-    elif callback.data == "faq_time":
-        await callback.message.answer("⏱ В среднем разработка и запуск занимают от 1 до 3 дней.")
-    elif callback.data == "faq_start":
-        await callback.message.answer("🚀 Для старта просто нажмите кнопку «Оставить заявку» в меню!")
+@dp.callback_query(F.data.startswith("calc_"))
+async def process_calc(callback: types.CallbackQuery):
+    if callback.data == "calc_site":
+        ans = "💻 **Разработка сайта:** от 15 000 ₽\n⏱ Сроки: 3–5 дней."
+    elif callback.data == "calc_bot":
+        ans = "🤖 **Разработка Telegram-бота:** от 10 000 ₽\n⏱ Сроки: 1–3 дня."
+    elif callback.data == "calc_promo":
+        ans = "📈 **Настройка рекламы:** от 20 000 ₽\n⏱ Сроки: от 7 дней."
+    
+    await callback.message.answer(ans, parse_mode="Markdown")
     await callback.answer()
 
-@dp.message(F.text == "📩 Оставить заявку / Связаться")
-async def lead_request(message: types.Message):
-    await message.answer("Спасибо за проявленный интерес! Менеджер свяжется с вами в ближайшее время.")
+# FAQ
+@dp.message(F.text == "❓ Частые вопросы")
+async def show_faq(message: types.Message):
+    await message.answer("Ответы на популярные вопросы:", reply_markup=faq_kb)
+
+@dp.callback_query(F.data.startswith("faq_"))
+async def process_faq(callback: types.CallbackQuery):
+    if callback.data == "faq_time":
+        ans = "⏱ Большинство задач мы выполняем за **24–72 часа**."
+    elif callback.data == "faq_pay":
+        ans = "💳 Работаем по предоплате 50% (карты, перевод, крипта)."
     
-    # Отправка заявки тебе в личку
+    await callback.message.answer(ans, parse_mode="Markdown")
+    await callback.answer()
+
+# Сбор заявок (Заказать услугу)
+@dp.message(F.text == "🚀 Заказать услугу")
+async def lead_request(message: types.Message):
+    await message.answer(
+        "✅ **Заявка принята!**\nМенеджер свяжется с вами в течение 15 минут.",
+        parse_mode="Markdown"
+    )
+    
+    # Отправка уведомления тебе в личку
     if ADMIN_ID != 123456789:
         user_info = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
         await bot.send_message(
-            ADMIN_ID, 
-            f"🚀 **НОВАЯ ЗАЯВКА!**\nОт: {message.from_user.full_name} ({user_info})"
+            ADMIN_ID,
+            f"🔔 **НОВАЯ ЗАЯВКА НА УСЛУГУ!**\n\n"
+            f"**Клиент:** {message.from_user.full_name}\n"
+            f"**Контакт:** {user_info}"
         )
 
-# Обработка любого другого текста
-@dp.message(F.text)
-async def fallback_handler(message: types.Message):
-    await message.answer(
-        "Воспользуйтесь кнопками меню ниже, чтобы найти нужную информацию 👇", 
-        reply_markup=main_kb
-    )
-
 async def main():
-    print("Бот запущен!")
+    print("Профессиональный бот запущен!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
